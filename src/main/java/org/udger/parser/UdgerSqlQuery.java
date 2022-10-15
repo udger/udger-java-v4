@@ -128,7 +128,7 @@ public class UdgerSqlQuery {
             "ur.rowid=?"
         ;
 
-    public static final String SQL_CLIENT_CLASS =
+    public static final String SQL_DEVICE_CLASS =
         "SELECT " +
             DEVICE_COLUMNS +
         "FROM " +
@@ -234,5 +234,103 @@ public class UdgerSqlQuery {
             "udger_devicename_brand ON udger_devicename_brand.id=udger_devicename_list.brand_id " +
         "WHERE " +
             "regex_id = ? AND code = ?";
+
+   public static final String SQL_CLIENT_CH_REGEX =
+           "SELECT " +
+                   "class_id," +
+                   "client_id," +
+                   "regstring," +
+                   "name," +
+                   "name_code," +
+                   "homepage," +
+                   "icon," +
+                   "icon_big," +
+                   "engine," +
+                   "vendor," +
+                   "vendor_code," +
+                   "vendor_homepage," +
+                   "uptodate_current_version," +
+                   "client_classification," +
+                   "client_classification_code, " +
+                   "'https://udger.com/resources/ua-list/browser-detail?browser=' || REPLACE(name, ' ', '%20') AS ua_family_info_url " +
+            "FROM " +
+                "udger_client_ch_regex " +
+            "JOIN " +
+                "udger_client_list ON udger_client_list.id=udger_client_ch_regex.client_id " +
+            "JOIN " +
+                "udger_client_class ON udger_client_class.id=udger_client_list.class_id" +
+            "WHERE " +
+                "udger_client_ch_regex.mobile = ? " +
+            "ORDER BY " +
+                "sequence ASC";
+
+   public static final String SQL_OS_CH_REGEX =
+           "SELECT " +
+               "os_id," +
+               "regstring," +
+               "family," +
+               "family_code," +
+               "name,name_code," +
+               "homepage,icon," +
+               "icon_big,vendor," +
+               "vendor_code," +
+               "vendor_homepage, " +
+               "'https://udger.com/resources/ua-list/os-detail?os=' || REPLACE(name, ' ', '%20') AS os_info_url " +
+           "FROM " +
+               "udger_os_ch_regex " +
+           "JOIN " +
+               "udger_os_list ON udger_os_list.id=udger_os_ch_regex.os_id " +
+           "WHERE " +
+               "udger_os_ch_regex.version = ? OR udger_os_ch_regex.version = '-all-' " +
+           "ORDER BY sequence ASC";
+
+   public static final String SQL_DEVICE_NAME_CH_REGEX =
+           "SELECT " +
+               "id " +
+           "FROM " +
+               "udger_devicename_regex " +
+           "WHERE " +
+               "(os_family_code = ? AND os_code = '-all-') " +
+               "OR " +
+               "(os_family_code = ? AND os_code = ?)" +
+           "ORDER BY " +
+               "sequence " +
+           "LIMIT 0,1";
+
+   public static final String SQL_DEVICE_NAME_LIST_CH =
+           "SELECT " +
+               "marketname," +
+               "brand_code," +
+               "brand," +
+               "brand_url," +
+               "icon," +
+               "icon_big," +
+               "deviceclass_id, " +
+               "'https://udger.com/resources/ua-list/devices-brand-detail?brand=' || REPLACE(brand_code, ' ', '%20') AS brand_info_url " +
+           "FROM " +
+               "udger_devicename_list " +
+           "JOIN " +
+               "udger_devicename_brand ON udger_devicename_brand.id=udger_devicename_list.brand_id " +
+           "WHERE " +
+               "regex_id = ? AND code = ? ";
+
+    public static final String SQL_DEVICE_CLASS_CH =
+        "SELECT " +
+            DEVICE_COLUMNS +
+        "FROM " +
+            "udger_deviceclass_list " +
+        "WHERE " +
+            "id = ?";
+
+    public static final String SQL_DEVICE_CLASS_BY_MOBILE_CH =
+        "SELECT " +
+            DEVICE_COLUMNS +
+        "FROM " +
+            "udger_deviceclass_list " +
+        "JOIN " +
+            "udger_deviceclass_ch ON udger_deviceclass_list.id=udger_deviceclass_ch.device_id " +
+        "WHERE " +
+            "udger_deviceclass_ch.mobile = ?";
+
 
 }

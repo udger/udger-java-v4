@@ -18,7 +18,7 @@ public class UdgerPerformanceTest {
     private static void createPool() {
         POOL = new UdgerParser[10];
         for (int i=0; i<=9; i++) {
-            POOL[i] = new UdgerParser(new UdgerParser.ParserDbData("udgerdb_v3_" + i + ".dat"));
+            POOL[i] = new UdgerParser(new UdgerParser.ParserDbData("udgerdb_v4_" + i + ".dat"));
         }
     }
 
@@ -34,7 +34,7 @@ public class UdgerPerformanceTest {
         InputStream is = UdgerUaTest.class.getResourceAsStream("test_ua.json");
         JsonReader jsonReader = javax.json.Json.createReader(is);
         jsonArray = jsonReader.readArray();
-        UdgerParser.ParserDbData parserDbData = new UdgerParser.ParserDbData("udgerdb_v3.dat");
+        UdgerParser.ParserDbData parserDbData = new UdgerParser.ParserDbData("udgerdb_v4.dat");
         for (int i=0; i<10; i++) {
             System.out.println("### Test : " + (i+1));
             testSerial(parserDbData);

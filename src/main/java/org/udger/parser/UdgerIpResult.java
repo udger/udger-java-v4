@@ -1,5 +1,5 @@
 /*
-  Udger-update - Data updater for udger local and cloud parser
+  UdgerParser - Java agent string parser based on Udger https://udger.com/products/local_parser
 
   author     The Udger.com Team (info@udger.com)
   copyright  Copyright (c) Udger s.r.o.

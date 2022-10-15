@@ -31,7 +31,6 @@ public class UdgerParser implements Closeable {
 
     private static final Logger LOG = Logger.getLogger(UdgerParser.class.getName());
 
-    private static final String DB_FILENAME = "udgerdb_v3.dat";
     private static final String UDGER_UA_DEV_BRAND_LIST_URL = "https://udger.com/resources/ua-list/devices-brand-detail?brand=";
     private static final String ID_CRAWLER = "crawler";
     private static final Pattern PAT_UNPERLIZE = Pattern.compile("^/?(.*?)/si$");
@@ -98,19 +97,20 @@ public class UdgerParser implements Closeable {
         }
     }
 
-    private ParserDbData parserDbData;
+    private final ParserDbData parserDbData;
 
     private Connection connection;
 
     private final Map<String, SoftReference<Pattern>> regexCache = new HashMap<>();
 
-    private Map<String, PreparedStatement> preparedStmtMap = new HashMap<>();
+    private final Map<String, PreparedStatement> preparedStmtMap = new HashMap<>();
 
     private LRUCache<String, UdgerUaResult> cache;
 
     private boolean osParserEnabled = true;
     private boolean deviceParserEnabled = true;
     private boolean deviceBrandParserEnabled = true;
+    private boolean clientHintsParserEnabled = true;
     private boolean inMemoryEnabled = false;
 
     /**
@@ -188,48 +188,76 @@ public class UdgerParser implements Closeable {
      * This does not matter since the connection is internal to this client, as such there are
      * no chance of external modifications.
      *
-     * @param uaString the user agent string
-     * @return the intance of UdgerUaResult storing results of parsing
+     * @param uaString the ua string
+     * @return the udger ua result
      * @throws SQLException the SQL exception
      */
     public UdgerUaResult parseUa(String uaString) throws SQLException {
+        UdgerUaRequest uaRequest = new UdgerUaRequest.Builder()
+                .withUaString(uaString)
+                .build();
+        uaRequest.setUaString(uaString);
+        return parseUa(uaRequest);
+    }
 
-        UdgerUaResult ret;
+    /**
+     * Parses the user agent string and stores results of parsing in UdgerUaResult.
+     * If the parser was initialized to use an in memory DB, then the DB is not set to read only.
+     * This does not matter since the connection is internal to this client, as such there are
+     * no chance of external modifications.
+     *
+     * @param uaRequest the ua request
+     * @return the intance of UdgerUaResult storing results of parsing
+     * @throws SQLException the SQL exception
+     */
+    public UdgerUaResult parseUa(UdgerUaRequest uaRequest) throws SQLException {
+
+        UdgerUaResult result;
 
         if (cache != null) {
-            ret = cache.get(uaString);
-            if (ret != null) {
-                return ret;
+            result = cache.get(uaRequest.toString());
+            if (result != null) {
+                return result;
             }
         }
 
-        ret = new UdgerUaResult(uaString);
-
         prepare();
 
-        ClientInfo clientInfo = clientDetector(uaString, ret);
+        result = new UdgerUaResult();
 
-        if (!"Crawler".equals(ret.getUaClass())) {
-            if (osParserEnabled) {
-                osDetector(uaString, ret, clientInfo);
-            }
+        String uaString = uaRequest.getUaString();
 
-            if (deviceParserEnabled) {
-                deviceDetector(uaString, ret, clientInfo);
-            }
+        if (StringUtils.isNotEmpty(uaString)) {
+            ClientInfo clientInfo = clientDetector(uaString, result);
 
-            if (deviceBrandParserEnabled) {
-                if (ret.getOsFamilyCode() != null && !ret.getOsFamilyCode().isEmpty()) {
-                    fetchDeviceBrand(uaString, ret);
+            if (!"Crawler".equals(result.getUaClass())) {
+                if (osParserEnabled) {
+                    osDetector(uaString, result, clientInfo);
+                }
+
+                if (deviceParserEnabled) {
+                    deviceDetector(uaString, result, clientInfo);
+                }
+
+                if (deviceBrandParserEnabled) {
+                    if (StringUtils.isNotEmpty(result.getOsFamilyCode())) {
+                        fetchDeviceBrand(uaString, result);
+                    }
                 }
             }
         }
 
-        if (cache != null) {
-            cache.put(uaString, ret);
+        if (!"Crawler".equals(result.getUaClass())) {
+           if (clientHintsParserEnabled) {
+               fetchClientHint(uaRequest, result);
+           }
         }
 
-        return ret;
+        if (cache != null) {
+            cache.put(uaRequest.toString(), result);
+        }
+
+        return result;
     }
 
     /**
@@ -242,7 +270,7 @@ public class UdgerParser implements Closeable {
      */
     public UdgerIpResult parseIp(String ipString) throws SQLException, UnknownHostException {
 
-        UdgerIpResult ret = new UdgerIpResult(ipString);
+        UdgerIpResult result = new UdgerIpResult(ipString);
 
         InetAddress addr = InetAddress.getByName(ipString);
         Long ipv4int = null;
@@ -258,28 +286,28 @@ public class UdgerParser implements Closeable {
             normalizedIp = addr.getHostAddress().replaceAll("((?:(?:^|:)0+\\b){2,}):?(?!\\S*\\b\\1:0+\\b)(\\S*)", "::$2");
         }
 
-        ret.setIpClassification("Unrecognized");
-        ret.setIpClassificationCode("unrecognized");
+        result.setIpClassification("Unrecognized");
+        result.setIpClassificationCode("unrecognized");
 
         if (normalizedIp != null) {
 
             prepare();
 
             try (ResultSet ipRs = getFirstRow(UdgerSqlQuery.SQL_IP, normalizedIp)) {
-                if (ipRs != null && ipRs.next()) {
-                    fetchUdgerIp(ipRs, ret);
-                    if (!ID_CRAWLER.equals(ret.getIpClassificationCode())) {
-                        ret.setCrawlerFamilyInfoUrl("");
+                if (ipRs.next()) {
+                    fetchUdgerIp(ipRs, result);
+                    if (!ID_CRAWLER.equals(result.getIpClassificationCode())) {
+                        result.setCrawlerFamilyInfoUrl("");
                     }
                 }
             }
 
             if (ipv4int != null) {
-                ret.setIpVer(4);
+                result.setIpVer(4);
                 ResultSet dataCenterRs = getFirstRow(UdgerSqlQuery.SQL_DATACENTER, ipv4int, ipv4int);
-                fetchDataCenterAndCloseRs(dataCenterRs, ret);
+                fetchDataCenterAndCloseRs(dataCenterRs, result);
             } else {
-                ret.setIpVer(6);
+                result.setIpVer(6);
                 int[] ipArray = ip6ToArray((Inet6Address) addr);
                 ResultSet dataCenterRs = getFirstRow(UdgerSqlQuery.SQL_DATACENTER_RANGE6,
                         ipArray[0], ipArray[0],
@@ -291,11 +319,11 @@ public class UdgerParser implements Closeable {
                         ipArray[6], ipArray[6],
                         ipArray[7], ipArray[7]
                 );
-                fetchDataCenterAndCloseRs(dataCenterRs, ret);
+                fetchDataCenterAndCloseRs(dataCenterRs, result);
             }
         }
 
-        return ret;
+        return result;
     }
 
     private void fetchDataCenterAndCloseRs(ResultSet dataCenterRs, UdgerIpResult ret) throws SQLException {
@@ -388,6 +416,32 @@ public class UdgerParser implements Closeable {
         this.deviceBrandParserEnabled = deviceBrandParserEnabled;
     }
 
+    /**
+     * Checks if is clients hint parser enabled. Client hint parser is enabled by default.
+     *
+     * @return true, if device brand parser is enabled
+     */
+    public boolean isClientHintsParserEnabled() {
+        return clientHintsParserEnabled;
+    }
+
+    /**
+     * Enable/disable the client hint parser. Client hint parser is enabled by default. If enabled following fields
+     * of UdgerUaResult are filled by the client hint parser:
+     * <ul>
+     * <li>secChUa, secChUaFullVersionList, secChUaMobile, secChUaFullVersion</li>
+     * <li>secChUaPlatform, secChUaPlatformVersion, deviceBrandInfoUrl</li>
+     * </ul>
+     * <p>
+     * If the client hint fields are not necessary then disabling this feature can increase
+     * the parser's performance.
+     *
+     * @param clientHintsParserEnabled the new client hints parser enabled
+     */
+    public void setClientHintsParserEnabled(boolean clientHintsParserEnabled) {
+        this.clientHintsParserEnabled = clientHintsParserEnabled;
+    }
+
     private static WordDetector createWordDetector(Connection connection, String regexTableName, String wordTableName) throws SQLException {
 
         Set<Integer> usedWords = new HashSet<>();
@@ -398,14 +452,12 @@ public class UdgerParser implements Closeable {
         WordDetector result = new WordDetector();
 
         try (final Statement statement = connection.createStatement();
-             final ResultSet rs = statement.executeQuery("SELECT * FROM " + wordTableName)) {
-            if (rs != null) {
-                while (rs.next()) {
-                    int id = rs.getInt("id");
-                    if (usedWords.contains(id)) {
-                        String word = rs.getString("word").toLowerCase();
-                        result.addWord(id, word);
-                    }
+            final ResultSet rs = statement.executeQuery("SELECT * FROM " + wordTableName)) {
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                if (usedWords.contains(id)) {
+                    String word = rs.getString("word").toLowerCase();
+                    result.addWord(id, word);
                 }
             }
         }
@@ -414,11 +466,9 @@ public class UdgerParser implements Closeable {
 
     private static void addUsedWords(Set<Integer> usedWords, Connection connection, String regexTableName, String wordIdColumn) throws SQLException {
         try (Statement statement = connection.createStatement();
-             ResultSet rs = statement.executeQuery("SELECT " + wordIdColumn + " FROM " + regexTableName)) {
-            if (rs != null) {
-                while (rs.next()) {
-                    usedWords.add(rs.getInt(wordIdColumn));
-                }
+            ResultSet rs = statement.executeQuery("SELECT " + wordIdColumn + " FROM " + regexTableName)) {
+            while (rs.next()) {
+                usedWords.add(rs.getInt(wordIdColumn));
             }
         }
     }
@@ -436,121 +486,117 @@ public class UdgerParser implements Closeable {
     }
 
     private static List<IdRegString> prepareRegexpStruct(Connection connection, String regexpTableName) throws SQLException {
-        List<IdRegString> ret = new ArrayList<>();
+        List<IdRegString> result = new ArrayList<>();
         try (Statement statement = connection.createStatement();
-             ResultSet rs = statement.executeQuery("SELECT rowid, regstring, word_id, word2_id FROM " + regexpTableName + " ORDER BY sequence")) {
-            if (rs != null) {
-                while (rs.next()) {
-                    IdRegString irs = new IdRegString();
-                    irs.id = rs.getInt("rowid");
-                    irs.wordId1 = rs.getInt("word_id");
-                    irs.wordId2 = rs.getInt("word2_id");
-                    String regex = rs.getString("regstring");
-                    Matcher m = PAT_UNPERLIZE.matcher(regex);
-                    if (m.matches()) {
-                        regex = m.group(1);
-                    }
-                    irs.pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-                    ret.add(irs);
+            ResultSet rs = statement.executeQuery("SELECT rowid, regstring, word_id, word2_id FROM " + regexpTableName + " ORDER BY sequence")) {
+            while (rs.next()) {
+                IdRegString irs = new IdRegString();
+                irs.id = rs.getInt("rowid");
+                irs.wordId1 = rs.getInt("word_id");
+                irs.wordId2 = rs.getInt("word2_id");
+                String regex = rs.getString("regstring");
+                Matcher m = PAT_UNPERLIZE.matcher(regex);
+                if (m.matches()) {
+                    regex = m.group(1);
                 }
+                irs.pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+                result.add(irs);
             }
         }
-        return ret;
+        return result;
     }
 
-    private ClientInfo clientDetector(String uaString, UdgerUaResult ret) throws SQLException {
+    private ClientInfo clientDetector(String uaString, UdgerUaResult result) throws SQLException {
         ClientInfo clientInfo = new ClientInfo();
         try (ResultSet userAgentRs1 = getFirstRow(UdgerSqlQuery.SQL_CRAWLER, uaString)) {
-            if (userAgentRs1 != null && userAgentRs1.next()) {
-                fetchUserAgent(userAgentRs1, ret);
+            if (userAgentRs1.next()) {
+                fetchUserAgent(userAgentRs1, result);
                 clientInfo.classId = 99;
                 clientInfo.clientId = -1;
             } else {
                 MatcherWithIdRegString mwirs = findMatcherIdRegString(uaString, parserDbData.clientWordDetector.findWords(uaString), parserDbData.clientRegstringList);
                 if (mwirs != null) {
                     try (ResultSet userAgentRs2 = getFirstRow(UdgerSqlQuery.SQL_CLIENT, mwirs.irs.id)) {
-                        if (userAgentRs2 != null && userAgentRs2.next()) {
-                            fetchUserAgent(userAgentRs2, ret);
-                            clientInfo.classId = ret.getClassId();
-                            clientInfo.clientId = ret.getClientId();
-                            patchVersions(mwirs.matcher, ret);
+                        if (userAgentRs2.next()) {
+                            fetchUserAgent(userAgentRs2, result);
+                            clientInfo.classId = result.getClassId();
+                            clientInfo.clientId = result.getClientId();
+                            patchVersions(mwirs.matcher, result);
                         }
                     }
                 } else {
-                    ret.setUaClass("Unrecognized");
-                    ret.setUaClassCode("unrecognized");
+                    result.setUaClass("Unrecognized");
+                    result.setUaClassCode("unrecognized");
                 }
             }
         }
         return clientInfo;
     }
 
-    private void osDetector(String uaString, UdgerUaResult ret, ClientInfo clientInfo) throws SQLException {
+    private void osDetector(String uaString, UdgerUaResult result, ClientInfo clientInfo) throws SQLException {
         MatcherWithIdRegString mwirs = findMatcherIdRegString(uaString, parserDbData.osWordDetector.findWords(uaString), parserDbData.osRegstringList);
         if (mwirs != null) {
             try (ResultSet opSysRs = getFirstRow(UdgerSqlQuery.SQL_OS, mwirs.irs.id)) {
-                if (opSysRs != null && opSysRs.next()) {
-                    fetchOperatingSystem(opSysRs, ret);
+                if (opSysRs.next()) {
+                    fetchOperatingSystem(opSysRs, result);
                 }
             }
         } else {
             if (clientInfo.clientId != null && clientInfo.clientId != 0) {
                 try (ResultSet opSysRs = getFirstRow(UdgerSqlQuery.SQL_CLIENT_OS, clientInfo.clientId.toString())) {
-                    if (opSysRs != null && opSysRs.next()) {
-                        fetchOperatingSystem(opSysRs, ret);
+                    if (opSysRs.next()) {
+                        fetchOperatingSystem(opSysRs, result);
                     }
                 }
             }
         }
     }
 
-    private void deviceDetector(String uaString, UdgerUaResult ret, ClientInfo clientInfo) throws SQLException {
+    private void deviceDetector(String uaString, UdgerUaResult result, ClientInfo clientInfo) throws SQLException {
         MatcherWithIdRegString mwirs = findMatcherIdRegString(uaString, parserDbData.deviceWordDetector.findWords(uaString), parserDbData.deviceRegstringList);
         if (mwirs != null) {
             try (ResultSet devRs = getFirstRow(UdgerSqlQuery.SQL_DEVICE, mwirs.irs.id)) {
-                if (devRs != null && devRs.next()) {
-                    fetchDevice(devRs, ret);
+                if (devRs.next()) {
+                    fetchDevice(devRs, result);
                 }
             }
         } else {
             if (clientInfo.classId != null && clientInfo.classId != -1) {
-                try (ResultSet devRs = getFirstRow(UdgerSqlQuery.SQL_CLIENT_CLASS, clientInfo.classId.toString())) {
-                    if (devRs != null && devRs.next()) {
-                        fetchDevice(devRs, ret);
+                try (ResultSet devRs = getFirstRow(UdgerSqlQuery.SQL_DEVICE_CLASS, clientInfo.classId.toString())) {
+                    if (devRs.next()) {
+                        fetchDevice(devRs, result);
                     }
                 }
             }
         }
     }
 
-    private void fetchDeviceBrand(String uaString, UdgerUaResult ret) throws SQLException {
+    private void fetchDeviceBrand(String uaString, UdgerUaResult result) throws SQLException {
         PreparedStatement preparedStatement = preparedStmtMap.get(UdgerSqlQuery.SQL_DEVICE_REGEX);
         if (preparedStatement == null) {
             preparedStatement = connection.prepareStatement(UdgerSqlQuery.SQL_DEVICE_REGEX);
             preparedStmtMap.put(UdgerSqlQuery.SQL_DEVICE_REGEX, preparedStatement);
         }
-        preparedStatement.setObject(1, ret.getOsFamilyCode());
-        preparedStatement.setObject(2, ret.getOsCode());
+        preparedStatement.setObject(1, result.getOsFamilyCode());
+        preparedStatement.setObject(2, result.getOsCode());
         try (ResultSet devRegexRs = preparedStatement.executeQuery()) {
-            if (devRegexRs != null) {
-                while (devRegexRs.next()) {
-                    String devId = devRegexRs.getString("id");
-                    String regex = devRegexRs.getString("regstring");
-                    if (devId != null && regex != null) {
-                        Pattern patRegex = getRegexFromCache(regex);
-                        Matcher matcher = patRegex.matcher(uaString);
-                        if (matcher.find()) {
-                            try (ResultSet devNameListRs = getFirstRow(UdgerSqlQuery.SQL_DEVICE_NAME_LIST, devId, matcher.group(1))) {
-                                if (devNameListRs != null && devNameListRs.next()) {
-                                    ret.setDeviceMarketname(devNameListRs.getString("marketname"));
-                                    ret.setDeviceBrand(devNameListRs.getString("brand"));
-                                    ret.setDeviceBrandCode(devNameListRs.getString("brand_code"));
-                                    ret.setDeviceBrandHomepage(devNameListRs.getString("brand_url"));
-                                    ret.setDeviceBrandIcon(devNameListRs.getString("icon"));
-                                    ret.setDeviceBrandIconBig(devNameListRs.getString("icon_big"));
-                                    ret.setDeviceBrandInfoUrl(UDGER_UA_DEV_BRAND_LIST_URL + devNameListRs.getString("brand_code"));
-                                    break;
-                                }
+            while (devRegexRs.next()) {
+                String devId = devRegexRs.getString("id");
+                String regex = devRegexRs.getString("regstring");
+                if (devId != null && regex != null) {
+                    Pattern patRegex = getRegexFromCache(regex);
+                    Matcher matcher = patRegex.matcher(uaString);
+                    if (matcher.find()) {
+                        try (ResultSet devNameListRs = getFirstRow(UdgerSqlQuery.SQL_DEVICE_NAME_LIST, devId, matcher.group(1))) {
+                            if (devNameListRs.next()) {
+                                result.setDeviceMarketname(devNameListRs.getString("marketname"));
+                                result.setDeviceBrand(devNameListRs.getString("brand"));
+                                result.setDeviceBrandCode(devNameListRs.getString("brand_code"));
+                                result.setDeviceBrandHomepage(devNameListRs.getString("brand_url"));
+                                result.setDeviceBrandIcon(devNameListRs.getString("icon"));
+                                result.setDeviceBrandIconBig(devNameListRs.getString("icon_big"));
+                                result.setDeviceBrandInfoUrl(UDGER_UA_DEV_BRAND_LIST_URL + devNameListRs.getString("brand_code"));
+                                break;
                             }
                         }
                     }
@@ -560,8 +606,158 @@ public class UdgerParser implements Closeable {
     }
 
 
+    private void fetchClientHint(UdgerUaRequest uaRequest, UdgerUaResult result) throws SQLException {
+
+        if (StringUtils.isNotEmpty(uaRequest.getSecChUaFullVersionList()) || StringUtils.isNotEmpty(uaRequest.getSecChUa())) {
+
+            PreparedStatement preparedStatement1 = preparedStmtMap.get(UdgerSqlQuery.SQL_CLIENT_CH_REGEX);
+            if (preparedStatement1 == null) {
+                preparedStatement1 = connection.prepareStatement(UdgerSqlQuery.SQL_CLIENT_CH_REGEX);
+                preparedStmtMap.put(UdgerSqlQuery.SQL_CLIENT_CH_REGEX, preparedStatement1);
+            }
+
+            preparedStatement1.setObject(1, StringUtils.requireNonNullElse(result.getSecChUaMobile(), ""));
+
+            try (ResultSet clientChRegexRs = preparedStatement1.executeQuery()) {
+                String regstringSearch = uaRequest.getSecChUaFullVersionList();
+
+                if (StringUtils.isEmpty(regstringSearch)) {
+                    regstringSearch = uaRequest.getSecChUa();
+                }
+
+                if (StringUtils.isNotEmpty(regstringSearch)) {
+                    while (clientChRegexRs.next()) {
+                        String regex = clientChRegexRs.getString("regstring");
+                        if (regex != null) {
+                            Pattern patRegex = getRegexFromCache(regex);
+                            Matcher matcher = patRegex.matcher(regstringSearch);
+                            if (matcher.find()) {
+                                String ver = matcher.group(1);
+                                String verMajor;
+
+                                if (StringUtils.isNotEmpty(uaRequest.getSecChUaFullVersionList())) {
+                                    int dotIndex = ver.indexOf('.');
+                                    verMajor = dotIndex >= 0 ? ver.substring(0, dotIndex) : ver;
+                                } else {
+                                    verMajor = ver;
+                                    if (StringUtils.isNotEmpty(uaRequest.getSecChUaFullVersion())) {
+                                        ver = StringUtils.trim(uaRequest.getSecChUaFullVersion(), "\"");
+                                    }
+                                }
+
+                                // $client_id                                        = $r['client_id'];
+                                // $client_class_id                                  = $r['class_id'];
+
+                                result.setUaClass(clientChRegexRs.getString("client_classification"));
+                                result.setUaClassCode(clientChRegexRs.getString("client_classification_code"));
+                                result.setUa(clientChRegexRs.getString("name") + " " + matcher.group(1));
+                                result.setUaVersion(ver);
+                                result.setUaVersionMajor(verMajor);
+                                result.setUaUptodateCurrentVersion(clientChRegexRs.getString("uptodate_current_version"));
+                                result.setUaFamily(clientChRegexRs.getString("name"));
+                                result.setUaFamilyCode(clientChRegexRs.getString("name_code"));
+                                result.setUaFamilyHomepage(clientChRegexRs.getString("homepage"));
+                                result.setUaFamilyVendor(clientChRegexRs.getString("vendor"));
+                                result.setUaFamilyVendorCode(clientChRegexRs.getString("vendor_code"));
+                                result.setUaFamilyVendorHomepage(clientChRegexRs.getString("vendor_homepage"));
+                                result.setUaFamilyIcon(clientChRegexRs.getString("icon"));
+                                result.setUaFamilyIconBig(clientChRegexRs.getString("icon_big"));
+                                result.setUaFamilyInfoUrl(clientChRegexRs.getString("ua_family_info_url"));
+                                result.setUaEngine(clientChRegexRs.getString("engine"));
+
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // TODO : no checks?
+        PreparedStatement preparedStatement2 = preparedStmtMap.get(UdgerSqlQuery.SQL_OS_CH_REGEX);
+        if (preparedStatement2 == null) {
+            preparedStatement2 = connection.prepareStatement(UdgerSqlQuery.SQL_OS_CH_REGEX);
+            preparedStmtMap.put(UdgerSqlQuery.SQL_OS_CH_REGEX, preparedStatement2);
+        }
+
+        preparedStatement2.setObject(1, StringUtils.trim(StringUtils.requireNonNullElse(uaRequest.getSecChUaPlatformVersion(), ""), "\""));
+
+        try (ResultSet osChRegexRs = preparedStatement2.executeQuery()) {
+            while (osChRegexRs.next()) {
+                String regstringSearch = uaRequest.getSecChUaPlatform();
+                if (StringUtils.isNotEmpty(regstringSearch)) {
+                    String regex = osChRegexRs.getString("regstring");
+                    if (regex != null) {
+                        Pattern patRegex = getRegexFromCache(regex);
+                        Matcher matcher = patRegex.matcher(regstringSearch);
+                        if (matcher.find()) {
+                            // $os_id                                          = $r['os_id'];
+                            result.setOs(osChRegexRs.getString("name"));
+                            result.setOsCode(osChRegexRs.getString("name_code"));
+                            result.setOsHomePage(osChRegexRs.getString("homepage"));
+                            result.setOsIcon(osChRegexRs.getString("icon"));
+                            result.setOsIconBig(osChRegexRs.getString("icon_big"));
+                            result.setOsInfoUrl(osChRegexRs.getString("os_info_url"));
+                            result.setOsFamily(osChRegexRs.getString("family"));
+                            result.setOsFamilyCode(osChRegexRs.getString("family_code"));
+                            result.setOsFamilyVendor(osChRegexRs.getString("vendor"));
+                            result.setOsFamilyVendorCode(osChRegexRs.getString("vendor_code"));
+                            result.setOsFamilyVendorHomepage(osChRegexRs.getString("vendor_homepage"));
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (StringUtils.isNotEmpty(uaRequest.getSecChUaModel()) && StringUtils.isNotEmpty(result.getOsFamilyCode())) {
+            try (ResultSet deviceNameChRegexRs = getFirstRow(UdgerSqlQuery.SQL_DEVICE_NAME_CH_REGEX,
+                                                             result.getOsFamilyCode(), result.getOsFamilyCode(), result.getOsCode())) {
+                if (deviceNameChRegexRs.next()) {
+                    try (ResultSet deviceNameChListRs = getFirstRow(UdgerSqlQuery.SQL_DEVICE_NAME_LIST_CH,
+                                                                    deviceNameChRegexRs.getInt("id"), StringUtils.trim(uaRequest.getSecChUaModel(), "\""))) {
+
+                        if (deviceNameChListRs.next()) {
+                            result.setDeviceMarketname(deviceNameChListRs.getString("marketname"));
+                            result.setDeviceBrand(deviceNameChListRs.getString("brand"));
+                            result.setDeviceBrandCode(deviceNameChListRs.getString("brand_code"));
+                            result.setDeviceBrandHomepage(deviceNameChListRs.getString("brand_url"));
+                            result.setDeviceBrandIcon(deviceNameChListRs.getString("icon"));
+                            result.setDeviceBrandIconBig(deviceNameChListRs.getString("icon_big"));
+                            result.setDeviceBrandInfoUrl(deviceNameChListRs.getString("brand_info_url"));
+
+                            try (ResultSet deviceClassChRs = getFirstRow(UdgerSqlQuery.SQL_DEVICE_CLASS_CH, deviceNameChListRs.getInt("deviceclass_id"))) {
+                                if (deviceClassChRs.next()) {
+                                  result.setDeviceClass(deviceClassChRs.getString("device_class"));
+                                  result.setDeviceClassCode(deviceClassChRs.getString("device_class_code"));
+                                  result.setDeviceClassIcon(deviceClassChRs.getString("device_class_icon"));
+                                  result.setDeviceClassIconBig(deviceClassChRs.getString("device_class_icon_big"));
+                                  result.setDeviceClassInfoUrl(deviceClassChRs.getString("device_class_info_url"));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+
+        if (StringUtils.isNotEmpty(result.getDeviceClass()) && StringUtils.isNotEmpty(result.getUaClassCode())) {
+            try (ResultSet deviceClassByMobChRs = getFirstRow(UdgerSqlQuery.SQL_DEVICE_CLASS_BY_MOBILE_CH, uaRequest.getSecChUaMobile())) {
+                if (deviceClassByMobChRs.next()) {
+                    result.setDeviceClass(deviceClassByMobChRs.getString("name"));
+                    result.setDeviceClassCode(deviceClassByMobChRs.getString("name_code"));
+                    result.setDeviceClassIcon(deviceClassByMobChRs.getString("icon"));
+                    result.setDeviceClassIconBig(deviceClassByMobChRs.getString("icon_big"));
+                    result.setDeviceClassInfoUrl(deviceClassByMobChRs.getString("device_class_info_url"));
+                }
+            }
+        }
+    }
+
+
     private int[] ip6ToArray(Inet6Address addr) {
-        int ret[] = new int[8];
+        int[] ret = new int[8];
         byte[] bytes = addr.getAddress();
         for (int i = 0; i < 8; i++) {
             ret[i] = ((bytes[i * 2] << 8) & 0xff00) | (bytes[i * 2 + 1] & 0xff);
@@ -677,7 +873,7 @@ public class UdgerParser implements Closeable {
                 }
             }
             ret.setUaVersion(version);
-            String versionSegments[] = version.split("\\.");
+            String[] versionSegments = version.split("\\.");
             if (versionSegments.length > 0) {
                 ret.setUaVersionMajor(version.split("\\.")[0]);
             } else {
@@ -690,39 +886,39 @@ public class UdgerParser implements Closeable {
         }
     }
 
-    private void fetchUdgerIp(ResultSet rs, UdgerIpResult ret) throws SQLException {
-        ret.setCrawlerCategory(nvl(rs.getString("crawler_category")));
-        ret.setCrawlerCategoryCode(nvl(rs.getString("crawler_category_code")));
-        ret.setCrawlerFamily(nvl(rs.getString("crawler_family")));
-        ret.setCrawlerFamilyCode(nvl(rs.getString("crawler_family_code")));
-        ret.setCrawlerFamilyHomepage(nvl(rs.getString("crawler_family_homepage")));
-        ret.setCrawlerFamilyIcon(nvl(rs.getString("crawler_family_icon")));
-        ret.setCrawlerFamilyInfoUrl(nvl(rs.getString("crawler_family_info_url")));
-        ret.setCrawlerFamilyVendor(nvl(rs.getString("crawler_family_vendor")));
-        ret.setCrawlerFamilyVendorCode(nvl(rs.getString("crawler_family_vendor_code")));
-        ret.setCrawlerFamilyVendorHomepage(nvl(rs.getString("crawler_family_vendor_homepage")));
-        ret.setCrawlerLastSeen(nvl(rs.getString("crawler_last_seen")));
-        ret.setCrawlerName(nvl(rs.getString("crawler_name")));
-        ret.setCrawlerRespectRobotstxt(nvl(rs.getString("crawler_respect_robotstxt")));
-        ret.setCrawlerVer(nvl(rs.getString("crawler_ver")));
-        ret.setCrawlerVerMajor(nvl(rs.getString("crawler_ver_major")));
-        ret.setIpCity(nvl(rs.getString("ip_city")));
-        ret.setIpClassification(nvl(rs.getString("ip_classification")));
-        ret.setIpClassificationCode(nvl(rs.getString("ip_classification_code")));
-        ret.setIpCountry(nvl(rs.getString("ip_country")));
-        ret.setIpCountryCode(nvl(rs.getString("ip_country_code")));
-        ret.setIpHostname(nvl(rs.getString("ip_hostname")));
-        ret.setIpLastSeen(nvl(rs.getString("ip_last_seen")));
+    private void fetchUdgerIp(ResultSet rs, UdgerIpResult result) throws SQLException {
+        result.setCrawlerCategory(nvl(rs.getString("crawler_category")));
+        result.setCrawlerCategoryCode(nvl(rs.getString("crawler_category_code")));
+        result.setCrawlerFamily(nvl(rs.getString("crawler_family")));
+        result.setCrawlerFamilyCode(nvl(rs.getString("crawler_family_code")));
+        result.setCrawlerFamilyHomepage(nvl(rs.getString("crawler_family_homepage")));
+        result.setCrawlerFamilyIcon(nvl(rs.getString("crawler_family_icon")));
+        result.setCrawlerFamilyInfoUrl(nvl(rs.getString("crawler_family_info_url")));
+        result.setCrawlerFamilyVendor(nvl(rs.getString("crawler_family_vendor")));
+        result.setCrawlerFamilyVendorCode(nvl(rs.getString("crawler_family_vendor_code")));
+        result.setCrawlerFamilyVendorHomepage(nvl(rs.getString("crawler_family_vendor_homepage")));
+        result.setCrawlerLastSeen(nvl(rs.getString("crawler_last_seen")));
+        result.setCrawlerName(nvl(rs.getString("crawler_name")));
+        result.setCrawlerRespectRobotstxt(nvl(rs.getString("crawler_respect_robotstxt")));
+        result.setCrawlerVer(nvl(rs.getString("crawler_ver")));
+        result.setCrawlerVerMajor(nvl(rs.getString("crawler_ver_major")));
+        result.setIpCity(nvl(rs.getString("ip_city")));
+        result.setIpClassification(nvl(rs.getString("ip_classification")));
+        result.setIpClassificationCode(nvl(rs.getString("ip_classification_code")));
+        result.setIpCountry(nvl(rs.getString("ip_country")));
+        result.setIpCountryCode(nvl(rs.getString("ip_country_code")));
+        result.setIpHostname(nvl(rs.getString("ip_hostname")));
+        result.setIpLastSeen(nvl(rs.getString("ip_last_seen")));
     }
 
     private String nvl(String v) {
         return v != null ? v : "";
     }
 
-    private void fetchDataCenter(ResultSet rs, UdgerIpResult ret) throws SQLException {
-        ret.setDataCenterHomePage(nvl(rs.getString("datacenter_homepage")));
-        ret.setDataCenterName(nvl(rs.getString("datacenter_name")));
-        ret.setDataCenterNameCode(nvl(rs.getString("datacenter_name_code")));
+    private void fetchDataCenter(ResultSet rs, UdgerIpResult result) throws SQLException {
+        result.setDataCenterHomePage(nvl(rs.getString("datacenter_homepage")));
+        result.setDataCenterName(nvl(rs.getString("datacenter_name")));
+        result.setDataCenterNameCode(nvl(rs.getString("datacenter_name_code")));
     }
 
 }

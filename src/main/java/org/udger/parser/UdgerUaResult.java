@@ -15,7 +15,6 @@ public class UdgerUaResult implements Serializable {
     private static final long serialVersionUID = 1L;
 
     // UA
-    private final String uaString;
     private Integer clientId;
     private Integer classId;
     private String uaClass = "";
@@ -67,13 +66,14 @@ public class UdgerUaResult implements Serializable {
     private String deviceBrandIconBig = "";
     private String deviceBrandInfoUrl = "";
 
-    public UdgerUaResult(String uaString) {
-        this.uaString = uaString;
-    }
-
-    public String getUaString() {
-        return uaString;
-    }
+    // UA client hints
+    private String secChUa = "";
+    private String secChUaFullVersionList = "";
+    private String secChUaMobile = "";
+    private String secChUaFullVersion = "";
+    private String secChUaPlatform = "";
+    private String secChUaPlatformVersion = "";
+    private String secChUaModel = "";
 
     public Integer getClientId() {
         return clientId;
@@ -362,6 +362,50 @@ public class UdgerUaResult implements Serializable {
         this.deviceBrandInfoUrl = deviceBrandInfoUrl;
     }
 
+    public String getSecChUa() {
+        return secChUa;
+    }
+    public void setSecChUa(String secChUa) {
+        this.secChUa = secChUa;
+    }
+    public String getSecChUaFullVersionList() {
+        return secChUaFullVersionList;
+    }
+    public void setSecChUaFullVersionList(String secChUaFullVersionList) {
+        this.secChUaFullVersionList = secChUaFullVersionList;
+    }
+    public String getSecChUaFullVersion() {
+        return secChUaFullVersion;
+    }
+    public void setSecChUaFullVersion(String secChUaFullVersion) {
+        this.secChUaFullVersion = secChUaFullVersion;
+    }
+    public String getSecChUaMobile() {
+        return secChUaMobile;
+    }
+    public void setSecChUaMobile(String secChUaMobile) {
+        this.secChUaMobile = secChUaMobile;
+    }
+
+    public String getSecChUaPlatform() {
+        return secChUaPlatform;
+    }
+    public void setSecChUaPlatform(String secChUaPlatform) {
+        this.secChUaPlatform = secChUaPlatform;
+    }
+    public String getSecChUaPlatformVersion() {
+        return secChUaPlatformVersion;
+    }
+    public void setSecChUaPlatformVersion(String secChUaPlatformVersion) {
+        this.secChUaPlatformVersion = secChUaPlatformVersion;
+    }
+    public String getSecChUaModel() {
+        return secChUaModel;
+    }
+    public void setSecChUaModel(String secChUaModel) {
+        this.secChUaModel = secChUaModel;
+    }
+
     @Override
     public int hashCode() {
         final int prime = 31;
@@ -408,10 +452,16 @@ public class UdgerUaResult implements Serializable {
         result = prime * result + ((uaFamilyVendor == null) ? 0 : uaFamilyVendor.hashCode());
         result = prime * result + ((uaFamilyVendorCode == null) ? 0 : uaFamilyVendorCode.hashCode());
         result = prime * result + ((uaFamilyVendorHomepage == null) ? 0 : uaFamilyVendorHomepage.hashCode());
-        result = prime * result + ((uaString == null) ? 0 : uaString.hashCode());
         result = prime * result + ((uaUptodateCurrentVersion == null) ? 0 : uaUptodateCurrentVersion.hashCode());
         result = prime * result + ((uaVersion == null) ? 0 : uaVersion.hashCode());
         result = prime * result + ((uaVersionMajor == null) ? 0 : uaVersionMajor.hashCode());
+        result = prime * result + ((secChUa == null) ? 0 : secChUa.hashCode());
+        result = prime * result + ((secChUaFullVersionList == null) ? 0 : secChUaFullVersionList.hashCode());
+        result = prime * result + ((secChUaMobile == null) ? 0 : secChUaMobile.hashCode());
+        result = prime * result + ((secChUaFullVersion == null) ? 0 : secChUaFullVersion.hashCode());
+        result = prime * result + ((secChUaPlatform == null) ? 0 : secChUaPlatform.hashCode());
+        result = prime * result + ((secChUaPlatformVersion == null) ? 0 : secChUaPlatformVersion.hashCode());
+        result = prime * result + ((secChUaModel == null) ? 0 : secChUaModel.hashCode());
         return result;
     }
 
@@ -634,11 +684,6 @@ public class UdgerUaResult implements Serializable {
                 return false;
         } else if (!uaFamilyVendorHomepage.equals(other.uaFamilyVendorHomepage))
             return false;
-        if (uaString == null) {
-            if (other.uaString != null)
-                return false;
-        } else if (!uaString.equals(other.uaString))
-            return false;
         if (uaUptodateCurrentVersion == null) {
             if (other.uaUptodateCurrentVersion != null)
                 return false;
@@ -654,14 +699,48 @@ public class UdgerUaResult implements Serializable {
                 return false;
         } else if (!uaVersionMajor.equals(other.uaVersionMajor))
             return false;
+        if (secChUa == null) {
+            if (other.secChUa != null)
+                return false;
+        } else if (!secChUa.equals(other.secChUa))
+            return false;
+        if (secChUaFullVersionList == null) {
+            if (other.secChUaFullVersionList != null)
+                return false;
+        } else if (!secChUaFullVersionList.equals(other.secChUaFullVersionList))
+            return false;
+        if (secChUaMobile == null) {
+            if (other.secChUaMobile != null)
+                return false;
+        } else if (!secChUaMobile.equals(other.secChUaMobile))
+            return false;
+        if (secChUaFullVersion == null) {
+            if (other.secChUaFullVersion != null)
+                return false;
+        } else if (!secChUaFullVersion.equals(other.secChUaFullVersion))
+            return false;
+        if (secChUaPlatform == null) {
+            if (other.secChUaPlatform != null)
+                return false;
+        } else if (!secChUaPlatform.equals(other.secChUaPlatform))
+            return false;
+        if (secChUaPlatformVersion == null) {
+            if (other.secChUaPlatformVersion != null)
+                return false;
+        } else if (!secChUaPlatformVersion.equals(other.secChUaPlatformVersion))
+            return false;
+        if (secChUaModel == null) {
+            if (other.secChUaModel != null)
+                return false;
+        } else if (!secChUaModel.equals(other.secChUaModel))
+            return false;
         return true;
     }
 
     @Override
     public String toString() {
         return "UdgerUaResult [" +
-                "uaString=" + uaString +
-                ", clientId=" + clientId +
+                "clientId=" + clientId +
                 ", classId=" + classId +
                 ", uaClass=" + uaClass +
                 ", uaClassCode=" + uaClassCode +
@@ -706,6 +785,13 @@ public class UdgerUaResult implements Serializable {
                 ", deviceBrandIcon=" + deviceBrandIcon +
                 ", deviceBrandIconBig=" + deviceBrandIconBig +
                 ", deviceBrandInfoUrl=" + deviceBrandInfoUrl +
+                ", secChUa=" + secChUa +
+                ", secChUaFullVersionList=" + secChUaFullVersionList +
+                ", secChUaMobile=" + secChUaMobile +
+                ", secChUaFullVersion=" + secChUaFullVersion +
+                ", secChUaPlatform=" + secChUaPlatform +
+                ", secChUaPlatformVersion=" + secChUaPlatformVersion +
+                ", secChUaModel=" + secChUaModel +
                 "]";
     }
 

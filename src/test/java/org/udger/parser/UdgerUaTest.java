@@ -16,21 +16,47 @@ public class UdgerUaTest {
         JsonArray ja = jr.readArray();
         UdgerParser up = null;
         try {
-            UdgerParser.ParserDbData parserDbData = new UdgerParser.ParserDbData("udgerdb_v3.dat");
+            UdgerParser.ParserDbData parserDbData = new UdgerParser.ParserDbData("udgerdb_v4.dat");
             up = new UdgerParser(parserDbData);
             for (int i=0; i < ja.size(); i++) {
                 JsonObject jar = ja.getJsonObject(i);
                 JsonObject jor = jar.getJsonObject("ret");
-                String query = jar.getJsonObject("test").getString("teststring");
+
+                String uaQuery = jar.getJsonObject("test").getString("User-Agent");
+                String secChUa = jar.getJsonObject("test").getString("Sec-Ch-Ua");
+                String secChUaFullVersionList = jar.getJsonObject("test").getString("Sec-Ch-Ua-Full-Version-List");
+                String secChUaMobile = jar.getJsonObject("test").getString("Sec-Ch-Ua-Mobile");
+                String secChUaFullVersion = jar.getJsonObject("test").getString("Sec-Ch-Ua-Full-Version");
+                String secChUaPlatform = jar.getJsonObject("test").getString("Sec-Ch-Ua-Platform");
+                String secChUaPlatformVersion = jar.getJsonObject("test").getString("Sec-Ch-Ua-Platform-Version");
+                String secChUaModel = jar.getJsonObject("test").getString("Sec-Ch-Ua-Model");
+
+                UdgerUaRequest req;
+                if (StringUtils.isNotEmpty(uaQuery)) {
+                    req = new UdgerUaRequest.Builder()
+                            .withUaString(uaQuery)
+                            .build();
+                } else {
+                    req = new UdgerUaRequest.Builder()
+                            .withSecChUa(secChUa)
+                            .withSecChUaFullVersionList(secChUaFullVersionList)
+                            .withSecChUaMobile(secChUaMobile)
+                            .withSecChUaFullVersion(secChUaFullVersion)
+                            .withSecChUaPlatform(secChUaPlatform)
+                            .withSecChUaPlatformVersion(secChUaPlatformVersion)
+                            .withSecChUaUaModel(secChUaModel)
+                            .build();
+                }
+
                 try {
-                    UdgerUaResult ret = up.parseUa(query);
+                    UdgerUaResult ret = up.parseUa(req);
                     System.out.print("### Test : " + (i+1) + " - ");
                     if (checkResult(ret, jor)) {
                         System.out.println("SUCCEEDED");
                     } else {
                         System.out.println("FAILED!");
                     }
-                    System.out.println("Query: " + query);
+                    System.out.println("Query: " + req.toString());
 //                    System.out.println("Result: " + ReflectionToStringBuilder.toString(ret, ToStringStyle.MULTI_LINE_STYLE));
                 } catch (SQLException e) {
                     e.printStackTrace();
@@ -94,6 +120,15 @@ public class UdgerUaTest {
         result = testEqual(jor, "device_brand_icon", ret.getDeviceBrandIcon()) && result;
         result = testEqual(jor, "device_brand_icon_big", ret.getDeviceBrandIconBig()) && result;
         result = testEqual(jor, "device_brand_info_url", ret.getDeviceBrandInfoUrl()) && result;
+
+
+        result = testEqual(jor, "sec_ch_ua", ret.getSecChUa()) && result;
+        result = testEqual(jor, "sec_ch_ua_full_version_list", ret.getSecChUaFullVersionList()) && result;
+        result = testEqual(jor, "sec_ch_ua_mobile", ret.getSecChUaMobile()) && result;
+        result = testEqual(jor, "sec_ch_ua_full_version", ret.getSecChUaFullVersion()) && result;
+        result = testEqual(jor, "sec_ch_ua_platform", ret.getSecChUaPlatform()) && result;
+        result = testEqual(jor, "sec_ch_ua_platform_version", ret.getSecChUaPlatformVersion()) && result;
+        result = testEqual(jor, "sec_ch_ua_model", ret.getSecChUaModel()) && result;
 
         return result;
     }
