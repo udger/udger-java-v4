@@ -258,7 +258,7 @@ public class UdgerSqlQuery {
             "JOIN " +
                 "udger_client_list ON udger_client_list.id=udger_client_ch_regex.client_id " +
             "JOIN " +
-                "udger_client_class ON udger_client_class.id=udger_client_list.class_id" +
+                "udger_client_class ON udger_client_class.id=udger_client_list.class_id " +
             "WHERE " +
                 "udger_client_ch_regex.mobile = ? " +
             "ORDER BY " +

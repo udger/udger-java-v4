@@ -608,6 +608,16 @@ public class UdgerParser implements Closeable {
 
     private void fetchClientHint(UdgerUaRequest uaRequest, UdgerUaResult result) throws SQLException {
 
+        result.setSecChUa(uaRequest.getSecChUa());
+        result.setSecChUaFullVersionList(uaRequest.getSecChUaFullVersionList());
+        result.setSecChUaMobile(uaRequest.getSecChUaMobile());
+        result.setSecChUaFullVersion(uaRequest.getSecChUaFullVersion());
+        result.setSecChUaPlatform(uaRequest.getSecChUaPlatform());
+        result.setSecChUaPlatformVersion(uaRequest.getSecChUaPlatformVersion());
+        result.setSecChUaModel(uaRequest.getSecChUaModel());
+
+        int secChUaMobile = "?0".equals(uaRequest.getSecChUaMobile()) ? 0 : 1;
+
         if (StringUtils.isNotEmpty(uaRequest.getSecChUaFullVersionList()) || StringUtils.isNotEmpty(uaRequest.getSecChUa())) {
 
             PreparedStatement preparedStatement1 = preparedStmtMap.get(UdgerSqlQuery.SQL_CLIENT_CH_REGEX);
@@ -616,7 +626,7 @@ public class UdgerParser implements Closeable {
                 preparedStmtMap.put(UdgerSqlQuery.SQL_CLIENT_CH_REGEX, preparedStatement1);
             }
 
-            preparedStatement1.setObject(1, StringUtils.requireNonNullElse(result.getSecChUaMobile(), ""));
+            preparedStatement1.setObject(1, secChUaMobile);
 
             try (ResultSet clientChRegexRs = preparedStatement1.executeQuery()) {
                 String regstringSearch = uaRequest.getSecChUaFullVersionList();
@@ -685,7 +695,7 @@ public class UdgerParser implements Closeable {
         try (ResultSet osChRegexRs = preparedStatement2.executeQuery()) {
             while (osChRegexRs.next()) {
                 String regstringSearch = uaRequest.getSecChUaPlatform();
-                if (StringUtils.isNotEmpty(regstringSearch)) {
+                if (regstringSearch != null) {
                     String regex = osChRegexRs.getString("regstring");
                     if (regex != null) {
                         Pattern patRegex = getRegexFromCache(regex);
@@ -743,12 +753,12 @@ public class UdgerParser implements Closeable {
 
 
         if (StringUtils.isNotEmpty(result.getDeviceClass()) && StringUtils.isNotEmpty(result.getUaClassCode())) {
-            try (ResultSet deviceClassByMobChRs = getFirstRow(UdgerSqlQuery.SQL_DEVICE_CLASS_BY_MOBILE_CH, uaRequest.getSecChUaMobile())) {
+            try (ResultSet deviceClassByMobChRs = getFirstRow(UdgerSqlQuery.SQL_DEVICE_CLASS_BY_MOBILE_CH, secChUaMobile)) {
                 if (deviceClassByMobChRs.next()) {
-                    result.setDeviceClass(deviceClassByMobChRs.getString("name"));
-                    result.setDeviceClassCode(deviceClassByMobChRs.getString("name_code"));
-                    result.setDeviceClassIcon(deviceClassByMobChRs.getString("icon"));
-                    result.setDeviceClassIconBig(deviceClassByMobChRs.getString("icon_big"));
+                    result.setDeviceClass(deviceClassByMobChRs.getString("device_class"));
+                    result.setDeviceClassCode(deviceClassByMobChRs.getString("device_class_code"));
+                    result.setDeviceClassIcon(deviceClassByMobChRs.getString("device_class_icon"));
+                    result.setDeviceClassIconBig(deviceClassByMobChRs.getString("device_class_icon_big"));
                     result.setDeviceClassInfoUrl(deviceClassByMobChRs.getString("device_class_info_url"));
                 }
             }

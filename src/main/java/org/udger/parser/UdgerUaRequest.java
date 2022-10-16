@@ -67,6 +67,7 @@ public class UdgerUaRequest implements Serializable {
 
         public UdgerUaRequest build() {
             UdgerUaRequest result = new UdgerUaRequest();
+            result.setSecChUa(secChUa);
             result.setUaString(this.uaString);
             result.setSecChUaFullVersionList(this.secChUaFullVersionList);
             result.setSecChUaMobile(this.secChUaMobile);
