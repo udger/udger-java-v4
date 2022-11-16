@@ -18,14 +18,14 @@ public class UdgerParserChangeDBTest {
         try (UdgerParser parser = new UdgerParser(parserDbData)) {
 
           UdgerUaResult qr = parser.parseUa(uaQuery);
-          assertEquals(qr.getUaUptodateCurrentVersion(), "50");
+          assertEquals("50", qr.getUaUptodateCurrentVersion());
         }
 
         URL resource2 = this.getClass().getClassLoader().getResource("udgerdb_test_v4_switch.dat");
         UdgerParser.ParserDbData parserDbData2 = new UdgerParser.ParserDbData(resource2.getFile());
         try (UdgerParser parser2 = new UdgerParser(parserDbData2)) {
           UdgerUaResult qr2 = parser2.parseUa(uaQuery);
-          assertEquals(qr2.getUaUptodateCurrentVersion(), "50X");
+          assertEquals("50X", qr2.getUaUptodateCurrentVersion());
         }
     }
 }
