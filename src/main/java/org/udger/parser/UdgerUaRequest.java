@@ -9,6 +9,7 @@
 package org.udger.parser;
 
 import java.io.Serializable;
+import java.util.Map;
 
 /**
  * The Class UdgerUaRequest.
@@ -137,6 +138,19 @@ public class UdgerUaRequest implements Serializable {
     }
     public void setSecChUaModel(String secChUaModel) {
         this.secChUaModel = secChUaModel;
+    }
+
+    public static UdgerUaRequest fromHeaders(Map<String, String> headers) {
+        UdgerUaRequest udgerUaRequest = new UdgerUaRequest();
+        udgerUaRequest.setSecChUa(headers.get("sec-ch-ua"));
+        udgerUaRequest.setSecChUaFullVersionList(headers.get("sec-ch-ua-full-version-list"));
+        udgerUaRequest.setSecChUaMobile(headers.get("sec-ch-ua-mobile"));
+        udgerUaRequest.setSecChUaFullVersion(headers.get("sec-ch-ua-full-version"));
+        udgerUaRequest.setSecChUaPlatform(headers.get("sec-ch-ua-platform"));
+        udgerUaRequest.setSecChUaPlatformVersion(headers.get("sec-ch-ua-platform-version"));
+        udgerUaRequest.setSecChUaModel(headers.get("sec-ch-ua-model"));
+        udgerUaRequest.setUaString(headers.get("user-agent"));
+        return udgerUaRequest;
     }
 
     private void setFromHeaders(String headers) {
