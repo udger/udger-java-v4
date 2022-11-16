@@ -44,7 +44,7 @@ public class UdgerUaTest {
                             .withSecChUaFullVersion(secChUaFullVersion)
                             .withSecChUaPlatform(secChUaPlatform)
                             .withSecChUaPlatformVersion(secChUaPlatformVersion)
-                            .withSecChUaUaModel(secChUaModel)
+                            .withSecChUaModel(secChUaModel)
                             .build();
                 }
 

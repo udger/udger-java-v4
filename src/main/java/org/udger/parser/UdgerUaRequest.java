@@ -56,7 +56,7 @@ public class UdgerUaRequest implements Serializable {
             this.secChUaPlatformVersion = secChUaPlatformVersion;
             return this;
         }
-        public Builder withSecChUaUaModel(String secChUaModel) {
+        public Builder withSecChUaModel(String secChUaModel) {
             this.secChUaModel = secChUaModel;
             return this;
         }

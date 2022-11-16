@@ -37,32 +37,32 @@ public class UdgerParserTest {
     public void testUaString1() throws SQLException {
         String uaQuery = "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0";
         UdgerUaResult qr = parser.parseUa(uaQuery);
-        assertEquals(qr.getUa(), "Firefox 40.0");
-        assertEquals(qr.getOs(), "Windows 10");
-        assertEquals(qr.getUaFamily(), "Firefox");
+        assertEquals("Firefox 40.0", qr.getUa());
+        assertEquals("Windows 10", qr.getOs());
+        assertEquals("Firefox", qr.getUaFamily());
     }
 
     @Test
     public void testIp() throws SQLException, UnknownHostException {
         String ipQuery = "108.61.199.93";
         UdgerIpResult qr = parser.parseIp(ipQuery);
-        assertEquals(qr.getIpClassificationCode(), "crawler");
+        assertEquals("crawler", qr.getIpClassificationCode());
     }
 
     @Test
     public void testUaStringInMemoryParser() throws SQLException {
         String uaQuery = "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0";
         UdgerUaResult qr = inMemoryParser.parseUa(uaQuery);
-        assertEquals(qr.getUa(), "Firefox 40.0");
-        assertEquals(qr.getOs(), "Windows 10");
-        assertEquals(qr.getUaFamily(), "Firefox");
+        assertEquals("Firefox 40.0", qr.getUa());
+        assertEquals("Windows 10", qr.getOs());
+        assertEquals("Firefox", qr.getUaFamily());
     }
 
     @Test
     public void testIpInMemoryParser() throws SQLException, UnknownHostException {
         String ipQuery = "108.61.199.93";
         UdgerIpResult qr = inMemoryParser.parseIp(ipQuery);
-        assertEquals(qr.getIpClassificationCode(), "crawler");
+        assertEquals("crawler", qr.getIpClassificationCode());
     }
 
     @Test
@@ -83,9 +83,9 @@ public class UdgerParserTest {
                         gate.await();
                         for (int j = 0; j < 100; j++) {
                             UdgerUaResult qr = threadParser.parseUa(uaQuery);
-                            assertEquals(qr.getUa(), "Firefox 40.0");
-                            assertEquals(qr.getOs(), "Windows 10");
-                            assertEquals(qr.getUaFamily(), "Firefox");
+                            assertEquals("Firefox 40.0", qr.getUa());
+                            assertEquals("Windows 10", qr.getOs());
+                            assertEquals("Firefox", qr.getUaFamily());
                         }
                     } catch (Throwable t) {
                         failures.add(t);
