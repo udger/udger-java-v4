@@ -249,7 +249,7 @@ public class UdgerParser implements Closeable {
 
         if (!"Crawler".equals(result.getUaClass())) {
            if (clientHintsParserEnabled) {
-               fetchClientHint(uaRequest, result);
+               parseClientHints(uaRequest, result);
            }
         }
 
@@ -606,58 +606,59 @@ public class UdgerParser implements Closeable {
     }
 
 
-    private void fetchClientHint(UdgerUaRequest uaRequest, UdgerUaResult result) throws SQLException {
+    private void parseClientHints(UdgerUaRequest uaRequest, UdgerUaResult result) throws SQLException {
 
         result.setSecChUa(uaRequest.getSecChUa());
-        result.setSecChUaFullVersion(uaRequest.getSecChUaFullVersion());
-        if (StringUtils.isNotEmpty(uaRequest.getSecChUaFullVersion())) {
-            result.setSecChUaFullVersion(StringUtils.trim(uaRequest.getSecChUaFullVersion(), "\""));
-        } else {
-            result.setSecChUaFullVersion(uaRequest.getSecChUaFullVersion());
-        }
-        result.setSecChUaFullVersionList(uaRequest.getSecChUaFullVersionList());
-        result.setSecChUaModel(uaRequest.getSecChUaModel());
-        result.setSecChUaPlatform(uaRequest.getSecChUaPlatform());
-        result.setSecChUaPlatformVersion(uaRequest.getSecChUaPlatformVersion());
+
+        String secChUaFullVersion = StringUtils.trim(uaRequest.getSecChUaFullVersion(), "\"");
+        String secChUaFullVersionList = StringUtils.trim(uaRequest.getSecChUaFullVersionList(), "\"");
+        String secChUaModel = StringUtils.trim(uaRequest.getSecChUaModel(), "\"");
+        String secChUaPlatform = StringUtils.trim(uaRequest.getSecChUaPlatform(), "\"");
+        String secChUaPlatformVersion = StringUtils.trim(uaRequest.getSecChUaPlatformVersion(), "\"");
+
+        result.setSecChUaFullVersion(secChUaFullVersion);
+        result.setSecChUaFullVersionList(secChUaFullVersionList);
+        result.setSecChUaModel(secChUaModel);
+        result.setSecChUaPlatform(secChUaPlatform);
+        result.setSecChUaPlatformVersion(secChUaPlatformVersion);
 
         int secChUaMobile = "?0".equals(uaRequest.getSecChUaMobile()) ? 0 : 1;
 
         result.setSecChUaMobile(String.valueOf(secChUaMobile));
 
-        if (StringUtils.isNotEmpty(uaRequest.getSecChUaFullVersionList()) || StringUtils.isNotEmpty(uaRequest.getSecChUa())) {
+        {
+            String regstringSearch1 = secChUaFullVersionList;
 
-            PreparedStatement preparedStatement1 = preparedStmtMap.get(UdgerSqlQuery.SQL_CLIENT_CH_REGEX);
-            if (preparedStatement1 == null) {
-                preparedStatement1 = connection.prepareStatement(UdgerSqlQuery.SQL_CLIENT_CH_REGEX);
-                preparedStmtMap.put(UdgerSqlQuery.SQL_CLIENT_CH_REGEX, preparedStatement1);
+            if (StringUtils.isEmpty(regstringSearch1)) {
+                regstringSearch1 = uaRequest.getSecChUa();
             }
 
-            preparedStatement1.setObject(1, secChUaMobile);
-
-            try (ResultSet clientChRegexRs = preparedStatement1.executeQuery()) {
-                String regstringSearch = uaRequest.getSecChUaFullVersionList();
-
-                if (StringUtils.isEmpty(regstringSearch)) {
-                    regstringSearch = uaRequest.getSecChUa();
+            if (StringUtils.isNotEmpty(regstringSearch1)) {
+                PreparedStatement preparedStatement1 = preparedStmtMap.get(UdgerSqlQuery.SQL_CLIENT_CH_REGEX);
+                if (preparedStatement1 == null) {
+                    preparedStatement1 = connection.prepareStatement(UdgerSqlQuery.SQL_CLIENT_CH_REGEX);
+                    preparedStmtMap.put(UdgerSqlQuery.SQL_CLIENT_CH_REGEX, preparedStatement1);
                 }
 
-                if (StringUtils.isNotEmpty(regstringSearch)) {
+                preparedStatement1.setObject(1, secChUaMobile);
+
+                try (ResultSet clientChRegexRs = preparedStatement1.executeQuery()) {
                     while (clientChRegexRs.next()) {
                         String regex = clientChRegexRs.getString("regstring");
                         if (regex != null) {
                             Pattern patRegex = getRegexFromCache(regex);
-                            Matcher matcher = patRegex.matcher(regstringSearch);
+                            Matcher matcher = patRegex.matcher(regstringSearch1);
                             if (matcher.find()) {
                                 String ver = matcher.group(1);
                                 String verMajor;
 
-                                if (StringUtils.isNotEmpty(uaRequest.getSecChUaFullVersionList())) {
+                                if (StringUtils.isNotEmpty(secChUaFullVersionList)) {
                                     int dotIndex = ver.indexOf('.');
                                     verMajor = dotIndex >= 0 ? ver.substring(0, dotIndex) : ver;
                                 } else {
                                     verMajor = ver;
-                                    if (StringUtils.isNotEmpty(uaRequest.getSecChUaFullVersion())) {
-                                        ver = StringUtils.trim(uaRequest.getSecChUaFullVersion(), "\"");
+                                    if (StringUtils.isNotEmpty(secChUaFullVersion)) {
+                                        ver = secChUaFullVersion;
                                     }
                                 }
 
@@ -688,23 +689,23 @@ public class UdgerParser implements Closeable {
             }
         }
 
-        // TODO : no checks?
-        PreparedStatement preparedStatement2 = preparedStmtMap.get(UdgerSqlQuery.SQL_OS_CH_REGEX);
-        if (preparedStatement2 == null) {
-            preparedStatement2 = connection.prepareStatement(UdgerSqlQuery.SQL_OS_CH_REGEX);
-            preparedStmtMap.put(UdgerSqlQuery.SQL_OS_CH_REGEX, preparedStatement2);
-        }
+        String regstringSearch2 = secChUaPlatform;
+        if (regstringSearch2 != null) {
+            // TODO : no checks?
+            PreparedStatement preparedStatement2 = preparedStmtMap.get(UdgerSqlQuery.SQL_OS_CH_REGEX);
+            if (preparedStatement2 == null) {
+                preparedStatement2 = connection.prepareStatement(UdgerSqlQuery.SQL_OS_CH_REGEX);
+                preparedStmtMap.put(UdgerSqlQuery.SQL_OS_CH_REGEX, preparedStatement2);
+            }
 
-        preparedStatement2.setObject(1, StringUtils.trim(StringUtils.requireNonNullElse(uaRequest.getSecChUaPlatformVersion(), ""), "\""));
+            preparedStatement2.setObject(1, StringUtils.requireNonNullElse(secChUaPlatformVersion, ""));
 
-        try (ResultSet osChRegexRs = preparedStatement2.executeQuery()) {
-            while (osChRegexRs.next()) {
-                String regstringSearch = uaRequest.getSecChUaPlatform();
-                if (regstringSearch != null) {
+            try (ResultSet osChRegexRs = preparedStatement2.executeQuery()) {
+                while (osChRegexRs.next()) {
                     String regex = osChRegexRs.getString("regstring");
                     if (regex != null) {
                         Pattern patRegex = getRegexFromCache(regex);
-                        Matcher matcher = patRegex.matcher(regstringSearch);
+                        Matcher matcher = patRegex.matcher(regstringSearch2);
                         if (matcher.find()) {
                             // $os_id                                          = $r['os_id'];
                             result.setOs(osChRegexRs.getString("name"));
@@ -725,13 +726,12 @@ public class UdgerParser implements Closeable {
             }
         }
 
-        if (StringUtils.isNotEmpty(uaRequest.getSecChUaModel()) && StringUtils.isNotEmpty(result.getOsFamilyCode())) {
+        if (StringUtils.isNotEmpty(secChUaModel) && StringUtils.isNotEmpty(result.getOsFamilyCode())) {
             try (ResultSet deviceNameChRegexRs = getFirstRow(UdgerSqlQuery.SQL_DEVICE_NAME_CH_REGEX,
                                                              result.getOsFamilyCode(), result.getOsFamilyCode(), result.getOsCode())) {
                 if (deviceNameChRegexRs.next()) {
                     try (ResultSet deviceNameChListRs = getFirstRow(UdgerSqlQuery.SQL_DEVICE_NAME_LIST_CH,
-                                                                    deviceNameChRegexRs.getInt("id"), StringUtils.trim(uaRequest.getSecChUaModel(), "\""))) {
-
+                                                                    deviceNameChRegexRs.getInt("id"), secChUaModel)) {
                         if (deviceNameChListRs.next()) {
                             result.setDeviceMarketname(deviceNameChListRs.getString("marketname"));
                             result.setDeviceBrand(deviceNameChListRs.getString("brand"));

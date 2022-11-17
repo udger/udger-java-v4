@@ -41,18 +41,21 @@ public class StringUtils {
      * @return the string
      */
     public static String trim(String text, String trimBy) {
-        int beginIndex = 0;
-        int endIndex = text.length();
+        if (text != null) {
+            int beginIndex = 0;
+            int endIndex = text.length();
 
-        while (text.substring(beginIndex, endIndex).startsWith(trimBy)) {
-            beginIndex += trimBy.length();
+            while (text.substring(beginIndex, endIndex).startsWith(trimBy)) {
+                beginIndex += trimBy.length();
+            }
+
+            while (text.substring(beginIndex, endIndex).endsWith(trimBy)) {
+                endIndex -= trimBy.length();
+            }
+
+            return text.substring(beginIndex, endIndex);
         }
-
-        while (text.substring(beginIndex, endIndex).endsWith(trimBy)) {
-            endIndex -= trimBy.length();
-        }
-
-        return text.substring(beginIndex, endIndex);
+        return null;
     }
 
     /**
