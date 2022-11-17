@@ -609,14 +609,20 @@ public class UdgerParser implements Closeable {
     private void fetchClientHint(UdgerUaRequest uaRequest, UdgerUaResult result) throws SQLException {
 
         result.setSecChUa(uaRequest.getSecChUa());
-        result.setSecChUaFullVersionList(uaRequest.getSecChUaFullVersionList());
-        result.setSecChUaMobile(uaRequest.getSecChUaMobile());
         result.setSecChUaFullVersion(uaRequest.getSecChUaFullVersion());
+        if (StringUtils.isNotEmpty(uaRequest.getSecChUaFullVersion())) {
+            result.setSecChUaFullVersion(StringUtils.trim(uaRequest.getSecChUaFullVersion(), "\""));
+        } else {
+            result.setSecChUaFullVersion(uaRequest.getSecChUaFullVersion());
+        }
+        result.setSecChUaFullVersionList(uaRequest.getSecChUaFullVersionList());
+        result.setSecChUaModel(uaRequest.getSecChUaModel());
         result.setSecChUaPlatform(uaRequest.getSecChUaPlatform());
         result.setSecChUaPlatformVersion(uaRequest.getSecChUaPlatformVersion());
-        result.setSecChUaModel(uaRequest.getSecChUaModel());
 
         int secChUaMobile = "?0".equals(uaRequest.getSecChUaMobile()) ? 0 : 1;
+
+        result.setSecChUaMobile(String.valueOf(secChUaMobile));
 
         if (StringUtils.isNotEmpty(uaRequest.getSecChUaFullVersionList()) || StringUtils.isNotEmpty(uaRequest.getSecChUa())) {
 
@@ -660,7 +666,7 @@ public class UdgerParser implements Closeable {
 
                                 result.setUaClass(clientChRegexRs.getString("client_classification"));
                                 result.setUaClassCode(clientChRegexRs.getString("client_classification_code"));
-                                result.setUa(clientChRegexRs.getString("name") + " " + matcher.group(1));
+                                result.setUa(clientChRegexRs.getString("name") + " " + ver);
                                 result.setUaVersion(ver);
                                 result.setUaVersionMajor(verMajor);
                                 result.setUaUptodateCurrentVersion(clientChRegexRs.getString("uptodate_current_version"));
@@ -674,7 +680,6 @@ public class UdgerParser implements Closeable {
                                 result.setUaFamilyIconBig(clientChRegexRs.getString("icon_big"));
                                 result.setUaFamilyInfoUrl(clientChRegexRs.getString("ua_family_info_url"));
                                 result.setUaEngine(clientChRegexRs.getString("engine"));
-
                                 break;
                             }
                         }
@@ -752,7 +757,7 @@ public class UdgerParser implements Closeable {
         }
 
 
-        if (StringUtils.isNotEmpty(result.getDeviceClass()) && StringUtils.isNotEmpty(result.getUaClassCode())) {
+        if (StringUtils.isEmpty(result.getDeviceClass()) && StringUtils.isNotEmpty(result.getUaClassCode())) {
             try (ResultSet deviceClassByMobChRs = getFirstRow(UdgerSqlQuery.SQL_DEVICE_CLASS_BY_MOBILE_CH, secChUaMobile)) {
                 if (deviceClassByMobChRs.next()) {
                     result.setDeviceClass(deviceClassByMobChRs.getString("device_class"));

@@ -1,7 +1,10 @@
 package org.udger.parser;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 
 import javax.json.JsonArray;
@@ -10,13 +13,15 @@ import javax.json.JsonReader;
 
 public class UdgerUaTest {
 
-    public static void main(String args[]) throws SQLException {
+    public static void main(String args[]) throws Exception {
         InputStream is = UdgerUaTest.class.getResourceAsStream("test_ua.json");
         JsonReader jr = javax.json.Json.createReader(is);
         JsonArray ja = jr.readArray();
         UdgerParser up = null;
         try {
-            UdgerParser.ParserDbData parserDbData = new UdgerParser.ParserDbData("udgerdb_v4.dat");
+            URL dbResource = UdgerUaTest.class.getResource("udgerdb_v4.dat");
+            String dbPath = Paths.get(dbResource.toURI()).toString();
+            UdgerParser.ParserDbData parserDbData = new UdgerParser.ParserDbData(dbPath);
             up = new UdgerParser(parserDbData);
             for (int i=0; i < ja.size(); i++) {
                 JsonObject jar = ja.getJsonObject(i);
@@ -31,22 +36,20 @@ public class UdgerUaTest {
                 String secChUaPlatformVersion = jar.getJsonObject("test").getString("Sec-Ch-Ua-Platform-Version");
                 String secChUaModel = jar.getJsonObject("test").getString("Sec-Ch-Ua-Model");
 
-                UdgerUaRequest req;
+                UdgerUaRequest.Builder builder = new UdgerUaRequest.Builder();
+
                 if (StringUtils.isNotEmpty(uaQuery)) {
-                    req = new UdgerUaRequest.Builder()
-                            .withUaString(uaQuery)
-                            .build();
-                } else {
-                    req = new UdgerUaRequest.Builder()
-                            .withSecChUa(secChUa)
-                            .withSecChUaFullVersionList(secChUaFullVersionList)
-                            .withSecChUaMobile(secChUaMobile)
-                            .withSecChUaFullVersion(secChUaFullVersion)
-                            .withSecChUaPlatform(secChUaPlatform)
-                            .withSecChUaPlatformVersion(secChUaPlatformVersion)
-                            .withSecChUaModel(secChUaModel)
-                            .build();
+                    builder = builder.withUaString(uaQuery);
                 }
+
+                UdgerUaRequest req = builder.withSecChUa(secChUa)
+                    .withSecChUaFullVersionList(secChUaFullVersionList)
+                    .withSecChUaMobile(secChUaMobile)
+                    .withSecChUaFullVersion(secChUaFullVersion)
+                    .withSecChUaPlatform(secChUaPlatform)
+                    .withSecChUaPlatformVersion(secChUaPlatformVersion)
+                    .withSecChUaModel(secChUaModel)
+                    .build();
 
                 try {
                     UdgerUaResult ret = up.parseUa(req);
