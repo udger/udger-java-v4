@@ -247,7 +247,7 @@ public class UdgerParser implements Closeable {
             }
         }
 
-        if (!"Crawler".equals(result.getUaClass())) {
+        if (!"Crawler".equals(result.getUaClassCode())) {
            if (clientHintsParserEnabled) {
                parseClientHints(uaRequest, result);
            }
@@ -622,7 +622,13 @@ public class UdgerParser implements Closeable {
         result.setSecChUaPlatform(secChUaPlatform);
         result.setSecChUaPlatformVersion(secChUaPlatformVersion);
 
-        int secChUaMobile = "?0".equals(uaRequest.getSecChUaMobile()) ? 0 : 1;
+        int secChUaMobile;
+
+        if (StringUtils.isEmpty(uaRequest.getSecChUaMobile()) || "?0".equals(uaRequest.getSecChUaMobile())) {
+            secChUaMobile = 0;
+        } else {
+            secChUaMobile = 1;
+        }
 
         result.setSecChUaMobile(String.valueOf(secChUaMobile));
 
