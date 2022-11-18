@@ -2,7 +2,9 @@ package org.udger.parser;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.net.UnknownHostException;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 
 import javax.json.JsonArray;
@@ -11,13 +13,15 @@ import javax.json.JsonReader;
 
 public class UdgerIpTest {
 
-    public static void main(String args[]) {
+    public static void main(String args[]) throws Exception {
         InputStream is = UdgerUaTest.class.getResourceAsStream("test_ip.json");
         JsonReader jr = javax.json.Json.createReader(is);
         JsonArray ja = jr.readArray();
         UdgerParser up = null;
         try {
-            UdgerParser.ParserDbData parserDbData = new UdgerParser.ParserDbData("udgerdb_v4.dat");
+            URL dbResource = UdgerUaTest.class.getResource("udgerdb_v4.dat");
+            String dbPath = Paths.get(dbResource.toURI()).toString();
+            UdgerParser.ParserDbData parserDbData = new UdgerParser.ParserDbData(dbPath);
             up = new UdgerParser(parserDbData);
             for (int i=0; i < ja.size(); i++) {
                 JsonObject jar = ja.getJsonObject(i);
@@ -25,9 +29,9 @@ public class UdgerIpTest {
                 String query = jar.getJsonObject("test").getString("teststring");
                 try {
                     UdgerIpResult ret = up.parseIp(query);
-                    System.out.print("### Test : " + (i+1) + " - ");
+                    System.out.println("### Test : " + (i+1));
                     if (checkResult(ret, jor)) {
-                        System.out.println("SUCCEEDED");
+                        System.out.println(" - SUCCEEDED");
                     } else {
                         System.out.println("FAILED!");
                     }

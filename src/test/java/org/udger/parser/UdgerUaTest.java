@@ -53,7 +53,7 @@ public class UdgerUaTest {
 
                 try {
                     UdgerUaResult ret = up.parseUa(req);
-                    System.out.print("### Test : " + (i+1) + " - ");
+                    System.out.println("### Test : " + (i+1));
                     if (checkResult(ret, jor)) {
                         System.out.println("SUCCEEDED");
                     } else {
@@ -142,7 +142,7 @@ public class UdgerUaTest {
             expected = expected.replaceAll(" ", "%20");
         }
         if (!expected.equals(ret)) {
-            System.out.println("Failed \"" + test + "\" : value=" + ret + "  expected:" + expected);
+            System.out.println("Failed \"" + test + "\" : value=" + ret + "  expected=" + expected);
             return false;
         }
         return true;

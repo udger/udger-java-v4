@@ -228,28 +228,28 @@ public class UdgerParser implements Closeable {
         String uaString = uaRequest.getUaString();
 
         if (StringUtils.isNotEmpty(uaString)) {
-            ClientInfo clientInfo = clientDetector(uaString, result);
+            ClientInfo clientInfo = processClient(uaString, result);
 
-            if (!"Crawler".equals(result.getUaClass())) {
+            /*if (!"Crawler".equals(result.getUaClass()))*/ {
                 if (osParserEnabled) {
-                    osDetector(uaString, result, clientInfo);
+                    processOs(uaString, result, clientInfo);
                 }
 
                 if (deviceParserEnabled) {
-                    deviceDetector(uaString, result, clientInfo);
+                    processDevice(uaString, result, clientInfo);
                 }
 
                 if (deviceBrandParserEnabled) {
                     if (StringUtils.isNotEmpty(result.getOsFamilyCode())) {
-                        fetchDeviceBrand(uaString, result);
+                        processDeviceBrand(uaString, result);
                     }
                 }
             }
         }
 
-        if (!"Crawler".equals(result.getUaClassCode())) {
+        if (!"Crawler".equals(result.getUaClass())) {
            if (clientHintsParserEnabled) {
-               parseClientHints(uaRequest, result);
+               processClientHints(uaRequest, result);
            }
         }
 
@@ -506,7 +506,7 @@ public class UdgerParser implements Closeable {
         return result;
     }
 
-    private ClientInfo clientDetector(String uaString, UdgerUaResult result) throws SQLException {
+    private ClientInfo processClient(String uaString, UdgerUaResult result) throws SQLException {
         ClientInfo clientInfo = new ClientInfo();
         try (ResultSet userAgentRs1 = getFirstRow(UdgerSqlQuery.SQL_CRAWLER, uaString)) {
             if (userAgentRs1.next()) {
@@ -533,7 +533,7 @@ public class UdgerParser implements Closeable {
         return clientInfo;
     }
 
-    private void osDetector(String uaString, UdgerUaResult result, ClientInfo clientInfo) throws SQLException {
+    private void processOs(String uaString, UdgerUaResult result, ClientInfo clientInfo) throws SQLException {
         MatcherWithIdRegString mwirs = findMatcherIdRegString(uaString, parserDbData.osWordDetector.findWords(uaString), parserDbData.osRegstringList);
         if (mwirs != null) {
             try (ResultSet opSysRs = getFirstRow(UdgerSqlQuery.SQL_OS, mwirs.irs.id)) {
@@ -552,7 +552,7 @@ public class UdgerParser implements Closeable {
         }
     }
 
-    private void deviceDetector(String uaString, UdgerUaResult result, ClientInfo clientInfo) throws SQLException {
+    private void processDevice(String uaString, UdgerUaResult result, ClientInfo clientInfo) throws SQLException {
         MatcherWithIdRegString mwirs = findMatcherIdRegString(uaString, parserDbData.deviceWordDetector.findWords(uaString), parserDbData.deviceRegstringList);
         if (mwirs != null) {
             try (ResultSet devRs = getFirstRow(UdgerSqlQuery.SQL_DEVICE, mwirs.irs.id)) {
@@ -571,7 +571,7 @@ public class UdgerParser implements Closeable {
         }
     }
 
-    private void fetchDeviceBrand(String uaString, UdgerUaResult result) throws SQLException {
+    private void processDeviceBrand(String uaString, UdgerUaResult result) throws SQLException {
         PreparedStatement preparedStatement = preparedStmtMap.get(UdgerSqlQuery.SQL_DEVICE_REGEX);
         if (preparedStatement == null) {
             preparedStatement = connection.prepareStatement(UdgerSqlQuery.SQL_DEVICE_REGEX);
@@ -606,7 +606,7 @@ public class UdgerParser implements Closeable {
     }
 
 
-    private void parseClientHints(UdgerUaRequest uaRequest, UdgerUaResult result) throws SQLException {
+    private void processClientHints(UdgerUaRequest uaRequest, UdgerUaResult result) throws SQLException {
 
         result.setSecChUa(uaRequest.getSecChUa());
 
@@ -695,8 +695,7 @@ public class UdgerParser implements Closeable {
             }
         }
 
-        String regstringSearch2 = secChUaPlatform;
-        if (regstringSearch2 != null) {
+        if (StringUtils.isNotEmpty(secChUaPlatform)) {
             // TODO : no checks?
             PreparedStatement preparedStatement2 = preparedStmtMap.get(UdgerSqlQuery.SQL_OS_CH_REGEX);
             if (preparedStatement2 == null) {
@@ -711,7 +710,7 @@ public class UdgerParser implements Closeable {
                     String regex = osChRegexRs.getString("regstring");
                     if (regex != null) {
                         Pattern patRegex = getRegexFromCache(regex);
-                        Matcher matcher = patRegex.matcher(regstringSearch2);
+                        Matcher matcher = patRegex.matcher(secChUaPlatform);
                         if (matcher.find()) {
                             // $os_id                                          = $r['os_id'];
                             result.setOs(osChRegexRs.getString("name"));
