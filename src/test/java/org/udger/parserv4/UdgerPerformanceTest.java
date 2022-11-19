@@ -1,4 +1,4 @@
-package org.udger.parser;
+package org.udger.parserv4;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,7 +8,7 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
 
-import org.udger.parser.UdgerParser.ParserDbData;
+import org.udger.parserv4.UdgerParser.ParserDbData;
 
 public class UdgerPerformanceTest {
 

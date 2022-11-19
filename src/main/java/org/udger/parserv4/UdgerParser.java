@@ -6,7 +6,7 @@
   license    GNU Lesser General Public License
   link       https://udger.com/products
 */
-package org.udger.parser;
+package org.udger.parserv4;
 
 import org.sqlite.SQLiteConfig;
 
@@ -228,9 +228,10 @@ public class UdgerParser implements Closeable {
         String uaString = uaRequest.getUaString();
 
         if (StringUtils.isNotEmpty(uaString)) {
+
             ClientInfo clientInfo = processClient(uaString, result);
 
-            /*if (!"Crawler".equals(result.getUaClass()))*/ {
+            if (!"Crawler".equals(result.getUaClass())) {
                 if (osParserEnabled) {
                     processOs(uaString, result, clientInfo);
                 }
@@ -624,13 +625,17 @@ public class UdgerParser implements Closeable {
 
         int secChUaMobile;
 
-        if (StringUtils.isEmpty(uaRequest.getSecChUaMobile()) || "?0".equals(uaRequest.getSecChUaMobile())) {
+        if (StringUtils.isEmpty(uaRequest.getSecChUaMobile())) {
             secChUaMobile = 0;
+            result.setSecChUaMobile("");
         } else {
-            secChUaMobile = 1;
+            if ("?0".equals(uaRequest.getSecChUaMobile())) {
+                secChUaMobile = 0;
+            } else {
+                secChUaMobile = 1;
+            }
+            result.setSecChUaMobile(String.valueOf(secChUaMobile));
         }
-
-        result.setSecChUaMobile(String.valueOf(secChUaMobile));
 
         {
             String regstringSearch1 = secChUaFullVersionList;
