@@ -231,27 +231,23 @@ public class UdgerParser implements Closeable {
 
             ClientInfo clientInfo = processClient(uaString, result);
 
-            if (!"Crawler".equals(result.getUaClass())) {
-                if (osParserEnabled) {
-                    processOs(uaString, result, clientInfo);
-                }
+            if (osParserEnabled && !"Crawler".equals(result.getUaClass())) {
+                processOs(uaString, result, clientInfo);
+            }
 
-                if (deviceParserEnabled) {
-                    processDevice(uaString, result, clientInfo);
-                }
+            if (deviceParserEnabled) {
+                processDevice(uaString, result, clientInfo);
+            }
 
-                if (deviceBrandParserEnabled) {
-                    if (StringUtils.isNotEmpty(result.getOsFamilyCode())) {
-                        processDeviceBrand(uaString, result);
-                    }
+            if (deviceBrandParserEnabled && !"Crawler".equals(result.getUaClass())) {
+                if (StringUtils.isNotEmpty(result.getOsFamilyCode())) {
+                    processDeviceBrand(uaString, result);
                 }
             }
         }
 
-        if (!"Crawler".equals(result.getUaClass())) {
-           if (clientHintsParserEnabled) {
-               processClientHints(uaRequest, result);
-           }
+        if (!"Crawler".equals(result.getUaClass()) && clientHintsParserEnabled) {
+           processClientHints(uaRequest, result);
         }
 
         if (cache != null) {
