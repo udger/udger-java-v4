@@ -2,9 +2,9 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.udger.parser</groupId>
-  <artifactId>udger-parser</artifactId>
-  <version>2.0.0</version>
+  <groupId>org.udger.parserv4</groupId>
+  <artifactId>udger-parser-v4</artifactId>
+  <version>2.0.0.Beta1</version>
   <name>Udger user agent and IP parser for udger v4</name>
   <description>Parse user agent string or IP using udger sqlite DB</description>
   <url>http://udger.com</url>
