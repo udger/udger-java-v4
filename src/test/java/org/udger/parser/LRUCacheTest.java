@@ -1,4 +1,4 @@
-package org.udger.parserv4;
+package org.udger.parser;
 
 import org.junit.Test;
 

@@ -1,12 +1,10 @@
-package org.udger.parserv4;
+package org.udger.parser;
 
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.net.URL;
 import java.sql.SQLException;
-
-import org.junit.Test;
 
 public class UdgerParserChangeDBTest {
 

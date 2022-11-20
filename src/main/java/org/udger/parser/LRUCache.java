@@ -6,7 +6,7 @@
   license    GNU Lesser General Public License
   link       https://udger.com/products
 */
-package org.udger.parserv4;
+package org.udger.parser;
 
 import java.io.Serializable;
 import java.util.HashMap;

@@ -1,4 +1,4 @@
-package org.udger.parserv4;
+package org.udger.parser;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -14,7 +14,6 @@ import java.util.concurrent.CyclicBarrier;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Test;
 
 public class UdgerParserTest {
 
