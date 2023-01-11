@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.udger.parserv4</groupId>
   <artifactId>udger-parser-v4</artifactId>
-  <version>2.0.0.Beta2</version>
+  <version>2.0.0</version>
   <name>Udger user agent and IP parser for udger v4</name>
   <description>Parse user agent string or IP using udger sqlite DB</description>
   <url>http://udger.com</url>
