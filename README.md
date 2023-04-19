@@ -93,19 +93,29 @@ Example:
 #### Sample.java
 
 ```java
-    public class Sample {
-      public static void main(String[] args) {
+public class Sample {
+    public static void main(String[] args) {
         UdgerParser.ParserDbData parserDbData = new UdgerParser.ParserDbData("/home/john/work/udgerdb_v4.dat");
         try (UdgerParser up = new UdgerParser(parserDbData)) {
             UdgerUaResult uaRet = up.parseUa("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9");
             UdgerIpResult ipRet = up.parseIp("108.61.199.93");
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } catch (UnknownHostException e) {
+            UdgerUaRequest.Builder builder = new UdgerUaRequest.Builder();
+            UdgerUaRequest req = builder.withUaString("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36")
+                    .withSecChUa("\"Chromium\";v=\"106\", \"Google Chrome\";v=\"106\", \"Not;A=Brand\";v=\"99\"")
+                    .withSecChUaFullVersionList("")
+                    .withSecChUaMobile("?0")
+                    .withSecChUaFullVersion("\"106.0.5249.91\"")
+                    .withSecChUaPlatform("\"Windows\"")
+                    .withSecChUaPlatformVersion("\"14.0.0\"")
+                    .withSecChUaModel("")
+                    .build();
+
+            UdgerUaResult uaRetReq = up.parseUa(req);
+        } catch (Exception e) {
             e.printStackTrace();
         }
-      }
     }
+}
 ```
 
 ### Automatic updates download
@@ -116,4 +126,3 @@ The Udger.com Team (info@udger.com)
 
 ### v3 format
 For the previous data format (v3), please use https://github.com/udger/udger-java
-
