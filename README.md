@@ -84,9 +84,9 @@ Example:
 
 ```xml
 <dependency>
-    <groupId>org.udger.parser</groupId>
-    <artifactId>udger-parser</artifactId>
-    <version>1.1.1</version>
+    <groupId>org.udger.parserv4</groupId>
+    <artifactId>udger-parser-v4</artifactId>
+    <version>2.0.0</version>
 </dependency>
 ```
 
